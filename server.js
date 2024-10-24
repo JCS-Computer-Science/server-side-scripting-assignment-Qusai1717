@@ -16,7 +16,7 @@ async function check(){
 server.get("/newgame", function(req,res){
     let newID = uuid.v4()
     let newgame = {
-        wordToguess: randWord,
+        wordToguess: "chase",
         wrongLetters: [],
         closeLetters: [],
         rightLetters:[],
@@ -28,8 +28,18 @@ server.get("/newgame", function(req,res){
     res.send({sessionID: newID})
 })
 server.get('/gamestate',(req,res) => {
-
-})
+   let sessionID =  req.query.sessionID
+    ///////////////////////////////
+   res.send({sessionID: newID})
+    // if (req.query.sessionID== undefined) {
+    //     res.status(404)
+    //     }  
+    // if (req.query.sessionID == null) {
+    //     res.status(400)
+    // }  
+    //     res.json.stringify(newgame.)
+    
+)
 
 
 //Do not remove this line. This allows the test suite to start
