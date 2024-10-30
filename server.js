@@ -41,29 +41,41 @@ server.get('/gamestate',(req,res) => {
 }
     }
 )
-server.get('/guess',(req,res) => {
+
+server.post('/guess',(req,res) => {
     let sessionID =req.body.sessionID
     let userGuess = req.body.guess;
     let session = activeSessions[sessionID]
     let value = userGuess.split("").toString()
     if (!sessionID) {
         res.status(400).send({error: "Session ID is missing"})
-    } else if (value.length != 5) {
-        res.status(400).send({error: "Invalid Guess"})
-    } else if(activeSessions[sessionID]) {
+    } 
+    if (value.length != 5) {
+        res.status(400).send({error: "Must be 5 letters"})
+    } 
+    
+    if(activeSessions[sessionID]) {
 
         let result;
         
          
          let realValue = session.wordToguess.split("")
-    for (let i = 0; i <= value.length; i++) {
+    for (let i = 0; i < value.length; i++) {
+        
+        let letter = value[i].toLowerCase()
+        if (!letter.match(/[a-z]/)) {
+            res.status(400).send({error: "Only takes letters" })
+        }
+
        for (let j = 0; j <= 5; j++) {
-       
-        if (value[i] == realValue[i]) {
+       if (letter == realValue[i]) {
+
           result = "RIGHT"
-        }else if(value[i] == realValue[i+j]){
+        }else if(letter== realValue[i+j]){
+
             result = "CLOSE"
         }else{
+
           result = "WRONG"
           
         }
@@ -71,7 +83,7 @@ server.get('/guess',(req,res) => {
     
     }
     let obj ={
-        value:value[i], result: result
+        value:letter, result: result
     }
     session.guesses.push(obj)
     res.status(201).send({gameState:activeSessions[sessionID]})
@@ -79,6 +91,7 @@ server.get('/guess',(req,res) => {
      } else {
          res.status(404).send({error: "Session doesn't exist"})
     }
+    
 }
 )
 
