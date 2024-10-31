@@ -6,7 +6,7 @@ server.use(express.static("public"))
 
 //All your code goes here
 let activeSessions={}
-let randWord;
+
 // async function check(){
 //     let response = await fetch("https://random-word-api.vercel.app/api?words=1&length=5")
 //     let results =await response.json()
@@ -16,7 +16,7 @@ let randWord;
 server.get("/newgame", (req,res) => {
     let newID = uuid.v4()
     let newgame = {
-        wordToguess: "chase",
+        wordToGuess: "chase",
         guesses: [],
         wrongLetters: [],
         closeLetters: [],
@@ -47,19 +47,20 @@ server.post('/guess',(req,res) => {
     let userGuess = req.body.guess;
     let session = activeSessions[sessionID]
     let value = userGuess.split("").toString()
-    if (!sessionID) {
+     if (!sessionID) {
         res.status(400).send({error: "Session ID is missing"})
-    } 
+    }
+    if(!session) {
+        res.status(404).send({error: "Session doesn't exist"})
+    }
+   
     if (value.length != 5) {
         res.status(400).send({error: "Must be 5 letters"})
     } 
     
     if(activeSessions[sessionID]) {
-
-        let result;
-        
-         
-         let realValue = session.wordToguess.split("")
+    let result;
+        let realValue = session.wordToGuess.split("")
     for (let i = 0; i < value.length; i++) {
         
         let letter = value[i].toLowerCase()
@@ -67,34 +68,42 @@ server.post('/guess',(req,res) => {
             res.status(400).send({error: "Only takes letters" })
         }
 
-       for (let j = 0; j <= 5; j++) {
+       
        if (letter == realValue[i]) {
 
           result = "RIGHT"
-        }else if(letter== realValue[i+j]){
+        }
+        for (let j = 1; j <= 5; j++) {
+        if(letter== realValue[i+j]){
 
             result = "CLOSE"
-        }else{
-
-          result = "WRONG"
-          
         }
-    }
-    
-    }
+        }
+        if (result = null) {
+            result = "WRONG"
+        }
+          
+          
+        
+    }  
     let obj ={
-        value:letter, result: result
+        value:letter, 
+        result: result
     }
-    session.guesses.push(obj)
+     session.guesses.push(obj)
     res.status(201).send({gameState:activeSessions[sessionID]})
-
-     } else {
-         res.status(404).send({error: "Session doesn't exist"})
     }
-    
-}
-)
+  
+    }
+   
 
+    //else {
+    //      res.status(404).send({error: "Session doesn't exist"})
+    // }
+    
+
+)
+// server.delete(/)
 
 
 //Do not remove this line. This allows the test suite to start
