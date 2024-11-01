@@ -42,12 +42,12 @@ server.get('/gamestate',(req,res) => {
     }
 )
 
-server.post('/guess',(req,res) => {
+server.post('/guess',(req,res) => { 
     let sessionID =req.body.sessionID
     let userGuess = req.body.guess;
     let session = activeSessions[sessionID]
     let value = userGuess.split("").toString()
-     if (!sessionID) {
+   if (!sessionID) {
         res.status(400).send({error: "Session ID is missing"})
     }
     if(!session) {
@@ -57,7 +57,7 @@ server.post('/guess',(req,res) => {
     if (value.length != 5) {
         res.status(400).send({error: "Must be 5 letters"})
     } 
-    
+    session.remainingGuesses-= 1     
     if(activeSessions[sessionID]) {
     let result;
         let realValue = session.wordToGuess.split("")
@@ -77,23 +77,25 @@ server.post('/guess',(req,res) => {
         if(letter== realValue[i+j]){
 
             result = "CLOSE"
-        }
+        } 
+              
         }
         if (result = null) {
             result = "WRONG"
         }
           
-          
-        
-    }  
-    let obj ={
+          let obj ={
         value:letter, 
         result: result
-    }
-     session.guesses.push(obj)
+        }
+         session.guesses.push(obj)
+         console.log( session.guesses.push(obj))
+    }   
+    
+    
     res.status(201).send({gameState:activeSessions[sessionID]})
     }
-  
+   
     }
    
 
