@@ -46,7 +46,9 @@ server.post('/guess',(req,res) => {
     let sessionID =req.body.sessionID
     let userGuess = req.body.guess;
     let session = activeSessions[sessionID]
+    let guess = []
     let value = userGuess.split("").toString()
+     session.remainingGuesses-= 1
    if (!sessionID) {
         res.status(400).send({error: "Session ID is missing"})
     }
@@ -57,7 +59,7 @@ server.post('/guess',(req,res) => {
     if (value.length != 5) {
         res.status(400).send({error: "Must be 5 letters"})
     } 
-    session.remainingGuesses-= 1     
+        
     if(activeSessions[sessionID]) {
     let result;
         let realValue = session.wordToGuess.split("")
@@ -68,28 +70,46 @@ server.post('/guess',(req,res) => {
             res.status(400).send({error: "Only takes letters" })
         }
 
-       
        if (letter == realValue[i]) {
 
           result = "RIGHT"
+          session.rightLetters.push(result) 
         }
-        for (let j = 1; j <= 5; j++) {
-        if(letter== realValue[i+j]){
+        
+        for (let j = 0; j <= 5; j++) {
+        if(letter== realValue[j]){
+            if (i == j) {
+               if (session.closeLetters.includes(letter)) {
+                let index = session.closeLetters.indexOf(letter)
+                session.closeLetters.splice(index,1)
+               } 
+               session.rightLetters.push(letter)
+               result = "RIGHT"
+            } else{
+                if (!session.closeLetters.includes(letter)) {
+                    game.closeLetters.push(letter)
+                }
+            }
+
 
             result = "CLOSE"
+            session.closeLetters.push(result) 
         } 
               
         }
         if (result = null) {
             result = "WRONG"
+            session.wrongLetters.push(result) 
         }
           
           let obj ={
         value:letter, 
         result: result
         }
-         session.guesses.push(obj)
-         console.log( session.guesses.push(obj))
+         guess.push(obj)
+        
+         session.guesses.push(guess)
+        //  console.log( session.guesses.push(obj))
     }   
     
     
