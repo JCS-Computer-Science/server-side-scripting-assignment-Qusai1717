@@ -7,16 +7,20 @@ server.use(express.static("public"));
 // All your code goes here
 let activeSessions = {};
 
+async function wordGen(){
+    let response = await fetch("https://random-word-api.vercel.app/api?words=1&length=5")
+    let results =await response.json()
+    let randWord = results[0]
+    return randWord
+}
 // async function check(){
-//     let response = await fetch("https://random-word-api.vercel.app/api?words=1&length=5")
-//     let results =await response.json()
-//     randWord = results[0]
+//      await fetch ("https://api.dictionaryapi.dev/api/v2/entries/en/" + userGuess)
 // }
 
-server.get("/newgame", (req, res) => {
+server.get("/newgame", async(req, res) => {
     let newID = uuid.v4();
     let newgame = {
-        wordToGuess: "chase",
+        wordToGuess: await wordGen(),
         guesses: [],
         wrongLetters: [],
         closeLetters: [],
@@ -40,10 +44,12 @@ server.get('/gamestate', (req, res) => {
     }
 });
 
-server.post('/guess', (req, res) => {
+server.post('/guess', async (req, res) => {
     let sessionID = req.body.sessionID;
     let userGuess = req.body.guess;
-
+    if(!await fetch ("https://api.dictionaryapi.dev/api/v2/entries/en/" + userGuess)){
+        res.status(400).send({error: "Not a real word"})
+    }
     if (!sessionID) {
         return res.status(400).send({ error: "Session ID is missing" });
     }
@@ -54,17 +60,22 @@ server.post('/guess', (req, res) => {
     if (userGuess.length !== 5) {
         return res.status(400).send({ error: "Guess must be 5 letters" });
     }
+    
 
     let realValue = session.wordToGuess.split("");
     let guess = [];
     session.remainingGuesses -= 1;
 
     
-    for (let i = 0; i < userGuess.length; i++) {
+       
+    
+    
+    for(let i = 0; i < userGuess.length; i++) {
         let letter = userGuess[i].toLowerCase();
         let result = "WRONG";
-
-        
+        if (letter.match(/[a-z]/)) {
+            res.status(400).send({error: "must contain letters"})
+        }
         if (letter === realValue[i]) {
             result = "RIGHT";
             if (!session.rightLetters.includes(letter)) {
@@ -78,7 +89,7 @@ server.post('/guess', (req, res) => {
                 session.closeLetters.push(letter);
             }
         } 
-        // Otherwise, it hass to be wrong
+        // if not than it hass to be wrong
         else {
             if (!session.wrongLetters.includes(letter)) {
                 session.wrongLetters.push(letter);
@@ -98,10 +109,58 @@ server.post('/guess', (req, res) => {
     }
 
     res.status(201).send({ gameState: session });
+
 });
 
-// server.delete(/)
+server.delete('/reset', (req,res) => {
+    let ID = req.query.sessionID;
+    if (!ID) {
+        res.status(400).send({error: "id is missing" });
+        return;
+    }
+    if (activeSessions[ID]) {
+        activeSessions[ID] = {
+            wordToGuess:undefined,
+            guesses:[],
+            wrongLetters: [],
+        closeLetters: [],
+        rightLetters: [],
+        remainingGuesses: 6,
+        gameOver: false
+        };
+        res.status(200).send({gameState: activeSessions[ID]});
 
+    } else {
+        res.status(404).send({gameState: activeSessions[ID]})
+    } 
+}
+)
+server.delete("/delete", (req,res)=> {
+    let sessionId = req.query.sessionID;
+    if (!sessionId) {
+        res.status(400).send({error: "Id is missing"})
+    }
+    if (activeSessions[sessionId]) {
+        delete activeSessions[sessionId]
+        res.status(204).send({ error: "Id is missing"})
+    }else {
+        res.status(404).send({error: "Session dont exist"})
+    }
+})
+server.get("/hint", async(req,res)=>{
+    let sessionId = req.query.sessionID
+    if (!sessionId) {
+        res.status(400).send({error: "Id is missing"})
+    }else
+    if (!activeSessions[sessionId]) {
+        res.status(404).send({error: "Session does not exist"})
+    }else{
+        let resp = await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/" + userGuess)
+        let reslts = await resp.json()
+        let def= reslts[0].meanings.definitions[0].definition
+        return def
+    }
+})
 // Do not remove this line. This allows the test suite to start
 // multiple instances of your server on different ports
 module.exports = server;
