@@ -1,11 +1,11 @@
 const express = require("express");
-const uuid = require("uuid")
+const uuid = require("uuid");
 const server = express();
-server.use(express.json())
-server.use(express.static("public"))
+server.use(express.json());
+server.use(express.static("public"));
 
-//All your code goes here
-let activeSessions={}
+// All your code goes here
+let activeSessions = {};
 
 // async function check(){
 //     let response = await fetch("https://random-word-api.vercel.app/api?words=1&length=5")
@@ -13,121 +13,95 @@ let activeSessions={}
 //     randWord = results[0]
 // }
 
-server.get("/newgame", (req,res) => {
-    let newID = uuid.v4()
+server.get("/newgame", (req, res) => {
+    let newID = uuid.v4();
     let newgame = {
         wordToGuess: "chase",
         guesses: [],
         wrongLetters: [],
         closeLetters: [],
-        rightLetters:[],
-        remainingGuesses:6,
-        gameOver:false
-        
-    }
-    activeSessions[newID]= newgame
-    res.status(201)
-    res.send({sessionID: newID})
-})
-server.get('/gamestate',(req,res) => {
-   let sessionID =  req.query.sessionID
- 
+        rightLetters: [],
+        remainingGuesses: 6,
+        gameOver: false
+    };
+    activeSessions[newID] = newgame;
+    res.status(201).send({ sessionID: newID });
+});
+
+server.get('/gamestate', (req, res) => {
+    let sessionID = req.query.sessionID;
+
     if (!sessionID) {
-        res.status(400).send({error: "id is missing"})
-    }else if(activeSessions[sessionID]){
-               res.status(200).send({gameState:activeSessions[sessionID]})
+        return res.status(400).send({ error: "Session ID is missing" });
+    } else if (activeSessions[sessionID]) {
+        return res.status(200).send({ gameState: activeSessions[sessionID] });
     } else {
-    res.status(404).send({error:"Game doesn't exist"})
-}
+        return res.status(404).send({ error: "Game doesn't exist" });
     }
-)
+});
 
-server.post('/guess',(req,res) => { 
-    let sessionID =req.body.sessionID
+server.post('/guess', (req, res) => {
+    let sessionID = req.body.sessionID;
     let userGuess = req.body.guess;
-    let session = activeSessions[sessionID]
-    let guess = []
-    let value = userGuess.split("").toString()
-     session.remainingGuesses-= 1
-   if (!sessionID) {
-        res.status(400).send({error: "Session ID is missing"})
-    }
-    if(!session) {
-        res.status(404).send({error: "Session doesn't exist"})
-    }
-   
-    if (value.length != 5) {
-        res.status(400).send({error: "Must be 5 letters"})
-    } 
-        
-    if(activeSessions[sessionID]) {
-    let result;
-        let realValue = session.wordToGuess.split("")
-    for (let i = 0; i < value.length; i++) {
-        
-        let letter = value[i].toLowerCase()
-        if (!letter.match(/[a-z]/)) {
-            res.status(400).send({error: "Only takes letters" })
-        }
 
-       if (letter == realValue[i]) {
+    if (!sessionID) {
+        return res.status(400).send({ error: "Session ID is missing" });
+    }
+    let session = activeSessions[sessionID];
+    if (!session) {
+        return res.status(404).send({ error: "Session doesn't exist" });
+    }
+    if (userGuess.length !== 5) {
+        return res.status(400).send({ error: "Guess must be 5 letters" });
+    }
 
-          result = "RIGHT"
-          session.rightLetters.push(result) 
-        }
+    let realValue = session.wordToGuess.split("");
+    let guess = [];
+    session.remainingGuesses -= 1;
+
+    
+    for (let i = 0; i < userGuess.length; i++) {
+        let letter = userGuess[i].toLowerCase();
+        let result = "WRONG";
+
         
-        for (let j = 0; j <= 5; j++) {
-        if(letter== realValue[j]){
-            if (i == j) {
-               if (session.closeLetters.includes(letter)) {
-                let index = session.closeLetters.indexOf(letter)
-                session.closeLetters.splice(index,1)
-               } 
-               session.rightLetters.push(letter)
-               result = "RIGHT"
-            } else{
-                if (!session.closeLetters.includes(letter)) {
-                    game.closeLetters.push(letter)
-                }
+        if (letter === realValue[i]) {
+            result = "RIGHT";
+            if (!session.rightLetters.includes(letter)) {
+                session.rightLetters.push(letter);
             }
-
-
-            result = "CLOSE"
-            session.closeLetters.push(result) 
         } 
-              
-        }
-        if (result = null) {
-            result = "WRONG"
-            session.wrongLetters.push(result) 
-        }
-          
-          let obj ={
-        value:letter, 
-        result: result
-        }
-         guess.push(obj)
         
-         session.guesses.push(guess)
-        //  console.log( session.guesses.push(obj))
-    }   
-    
-    
-    res.status(201).send({gameState:activeSessions[sessionID]})
-    }
-   
-    }
-   
+        else if (realValue.includes(letter)) {
+            result = "CLOSE";
+            if (!session.closeLetters.includes(letter)) {
+                session.closeLetters.push(letter);
+            }
+        } 
+        // Otherwise, it hass to be wrong
+        else {
+            if (!session.wrongLetters.includes(letter)) {
+                session.wrongLetters.push(letter);
+            }
+        }
 
-    //else {
-    //      res.status(404).send({error: "Session doesn't exist"})
-    // }
-    
+        guess.push({ value: letter, result });
+    }
 
-)
+    session.guesses.push(guess);
+
+    
+    if (userGuess === session.wordToGuess) {
+        session.gameOver = true;
+    } else if (session.remainingGuesses <= 0) {
+        session.gameOver = true;
+    }
+
+    res.status(201).send({ gameState: session });
+});
+
 // server.delete(/)
 
-
-//Do not remove this line. This allows the test suite to start
-//multiple instances of your server on different ports
+// Do not remove this line. This allows the test suite to start
+// multiple instances of your server on different ports
 module.exports = server;
