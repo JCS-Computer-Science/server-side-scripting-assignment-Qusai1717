@@ -47,8 +47,10 @@ server.get('/gamestate', (req, res) => {
 server.post('/guess', async (req, res) => {
     let sessionID = req.body.sessionID;
     let userGuess = req.body.guess;
-    if(!await fetch ("https://api.dictionaryapi.dev/api/v2/entries/en/" + userGuess)){
-        res.status(400).send({error: "Not a real word"})
+    let r = await fetch ("https://api.dictionaryapi.dev/api/v2/entries/en/" + userGuess)
+    let resuls =await r.json()
+    if(resuls.title === "No Definitions Found"){
+        return res.status(400).send({error: "Not a real word"})
     }
     if (!sessionID) {
         return res.status(400).send({ error: "Session ID is missing" });
@@ -72,22 +74,28 @@ server.post('/guess', async (req, res) => {
     
     for(let i = 0; i < userGuess.length; i++) {
         let letter = userGuess[i].toLowerCase();
-        let result = "WRONG";
-        if (letter.match(/[a-z]/)) {
+        let correctness = "WRONG";
+        if (!letter.match(/[a-z]/)) {
             res.status(400).send({error: "must contain letters"})
         }
         if (letter === realValue[i]) {
-            result = "RIGHT";
+            correctness = "RIGHT";
             if (!session.rightLetters.includes(letter)) {
                 session.rightLetters.push(letter);
             }
+            if (session.closeLetters.includes(letter)) {
+                let index = session.closeLetters.indexOf(letter)
+                session.closeLetters.splice(index,1)
+            }
+           
         } 
         
         else if (realValue.includes(letter)) {
-            result = "CLOSE";
-            if (!session.closeLetters.includes(letter)) {
+            correctness = "CLOSE";
+            if (!session.closeLetters.includes(letter) && !session.rightLetters.includes(letter)) {
                 session.closeLetters.push(letter);
             }
+
         } 
         // if not than it hass to be wrong
         else {
@@ -96,7 +104,7 @@ server.post('/guess', async (req, res) => {
             }
         }
 
-        guess.push({ value: letter, result });
+        guess.push({ value: letter, result: correctness });
     }
 
     session.guesses.push(guess);
@@ -130,9 +138,12 @@ server.delete('/reset', (req,res) => {
         };
         res.status(200).send({gameState: activeSessions[ID]});
 
-    } else {
-        res.status(404).send({gameState: activeSessions[ID]})
     } 
+    if (!activeSessions) {
+        res.status(404).send({gameState: activeSessions[ID]})
+    }
+        
+    
 }
 )
 server.delete("/delete", (req,res)=> {
