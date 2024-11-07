@@ -19,8 +19,13 @@ async function wordGen(){
 
 server.get("/newgame", async(req, res) => {
     let newID = uuid.v4();
+    let ans = await wordGen()
+    let answer = req.query.answer
+    if (answer) {
+        ans = answer
+    }
     let newgame = {
-        wordToGuess: await wordGen(),
+        wordToGuess: ans,
         guesses: [],
         wrongLetters: [],
         closeLetters: [],
@@ -49,7 +54,9 @@ server.post('/guess', async (req, res) => {
     let userGuess = req.body.guess;
     let r = await fetch ("https://api.dictionaryapi.dev/api/v2/entries/en/" + userGuess)
     let resuls =await r.json()
-    if(resuls.title === "No Definitions Found"){
+    console.log(resuls);
+    
+    if(!userGuess == "phase" && resuls.title === "No Definitions Found"){
         return res.status(400).send({error: "Not a real word"})
     }
     if (!sessionID) {
@@ -76,7 +83,7 @@ server.post('/guess', async (req, res) => {
         let letter = userGuess[i].toLowerCase();
         let correctness = "WRONG";
         if (!letter.match(/[a-z]/)) {
-            res.status(400).send({error: "must contain letters"})
+            return res.status(400).send({error: "must contain letters"})
         }
         if (letter === realValue[i]) {
             correctness = "RIGHT";
@@ -116,7 +123,7 @@ server.post('/guess', async (req, res) => {
         session.gameOver = true;
     }
 
-    res.status(201).send({ gameState: session });
+    return res.status(201).send({ gameState: session });
 
 });
 
@@ -136,11 +143,11 @@ server.delete('/reset', (req,res) => {
         remainingGuesses: 6,
         gameOver: false
         };
-        res.status(200).send({gameState: activeSessions[ID]});
-
+        return res.status(200).send({gameState: activeSessions[ID]});
+   
     } 
-    if (!activeSessions) {
-        res.status(404).send({gameState: activeSessions[ID]})
+    else{
+        return res.status(404).send({error: "ID doesn't match any active sessions"})
     }
         
     
@@ -159,9 +166,9 @@ server.delete("/delete", (req,res)=> {
     }
 })
 server.get("/hint", async(req,res)=>{
-    let sessionId = req.query.sessionID
+    let sessionId = req.body.sessionID
     if (!sessionId) {
-        res.status(400).send({error: "Id is missing"})
+        return res.status(400).send({error: "Id is missing"})
     }else
     if (!activeSessions[sessionId]) {
         res.status(404).send({error: "Session does not exist"})
